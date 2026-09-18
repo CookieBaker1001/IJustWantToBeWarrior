@@ -1,11 +1,14 @@
 import {
     _decorator, Component, CCFloat, Label, Sprite,
-    Vec3, find, Node, ProgressBar,
+    Vec3, find, Node, ProgressBar, Prefab, instantiate,
 } from 'cc';
 const { ccclass, property } = _decorator;
 
 @ccclass('HealthScript')
 export class HealthScript extends Component {
+
+    @property({ type: Prefab })
+    public healEffect: Prefab | null = null;
 
     @property({ type: Label })
     public hpLabel: Label | null = null;
@@ -20,6 +23,9 @@ export class HealthScript extends Component {
     @property({ type: CCFloat })
     public maxHealth: number = 100;
 
+    @property({ type: Prefab })
+    public deathPrefab: Prefab | null = null;
+
     private currentHealth: number = this.maxHealth;
 
     @property({ type: CCFloat })
@@ -27,10 +33,7 @@ export class HealthScript extends Component {
     private hpTimer: number = 0;
 
     private target: Node | null = null;
-
-    // @property({ type: CCFloat })
-    // public invincibillityTime: number = 0.25;
-    // private invincibilityTimer: number = this.invincibillityTime;
+    private isDead: boolean = false;
 
     start() {
         this.currentHealth = this.maxHealth;
@@ -52,20 +55,31 @@ export class HealthScript extends Component {
         if (this.hpSprite) {
             this.hpSpriteParent.lookAt(this.target?.worldPosition || Vec3.ZERO);
         }
-        // if (this.invincibilityTimer < this.invincibillityTime) {
-        //     this.invincibilityTimer += dt;
-        // }
     }
 
     public takeDamage(amount: number) {
-        //if (this.invincibilityTimer < this.invincibillityTime) return;
-        this.currentHealth -= amount;
+        const intAmount = Math.ceil(amount);
+        this.currentHealth -= intAmount;
         this.updateHP();
         if (this.currentHealth <= 0) {
-            if (this.node.name !== "Player") this.node.destroy();
+            if (this.node.name !== "Player") this.die();
             else {
                 this.node.getComponent("PlayerController").onPlayerDeath();
             }
+        }
+    }
+
+    public heal(amount: number) {
+        this.currentHealth += amount;
+        if (this.currentHealth > this.maxHealth) {
+            this.currentHealth = this.maxHealth;
+        }
+        this.updateHP();
+        if (this.healEffect) {
+            const effect = instantiate(this.healEffect);
+            this.node.scene!.addChild(effect);
+            effect.setWorldPosition(this.node.worldPosition.clone());
+            console.log("Spawned heal effect", effect.getWorldPosition());
         }
     }
 
@@ -79,5 +93,25 @@ export class HealthScript extends Component {
             this.hpSprite.node.scale = new Vec3(fillPercentage, 1, 1);
         }
     }
+
+    public blowUp() {
+        console.log("Blew up by comming close to player");
+        this.die();
+    }
+
+    private die() {
+        if (this.isDead) return;
+        this.isDead = true;
+        //console.log("Died");
+        if (this.deathPrefab !== null) {
+            const object = instantiate(this.deathPrefab);
+            object.setWorldPosition(this.node.worldPosition.clone());
+            this.node.scene!.addChild(object);
+            //console.log("Successfully instantiated death prefab at: " + this.node.worldPosition);
+            //console.log(object);
+        }
+        this.node.destroy();
+    }
 }
-
+
+

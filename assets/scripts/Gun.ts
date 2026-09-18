@@ -23,6 +23,9 @@ export class Gun extends Component {
     @property({ type: CCFloat })
     public damage: number = 20;
 
+    @property({ type: CCFloat })
+    public range: number = 50;
+
     start() {
         // this.recoil = this.node.getComponent(Animation) || null;
         // this.muzzle = this.node.getChildByName("Muzzle") || null;
@@ -66,20 +69,19 @@ export class Gun extends Component {
         ray.o.set(this.muzzle.position);
         ray.d.set(hitPoint);
 
-        let maxDistance = 100;
         const missPoint = new Vec3();
 
         Vec3.scaleAndAdd(
             missPoint,
             ray.o,
             ray.d,
-            maxDistance
+            this.range
         );
 
         const hit = PhysicsSystem.instance.raycastClosest(
             ray,
             0xffffffff,
-            maxDistance,
+            this.range,
         );
 
         let endPoint = missPoint;

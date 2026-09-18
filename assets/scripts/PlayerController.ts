@@ -1,6 +1,6 @@
 import {
     _decorator, Component, Node, RigidBody, input, Input, EventKeyboard, KeyCode,
-    EventMouse, Vec3, PhysicsSystem, geometry, game
+    EventMouse, Vec3, PhysicsSystem, geometry, game, CCFloat
 } from 'cc';
 const { ccclass, property } = _decorator;
 
@@ -91,8 +91,11 @@ export class PlayerController extends Component {
 
     private running = false;
 
-    private walkSpeed = 5;
-    private runSpeed = 10;
+    @property({ type: CCFloat })
+    public walkSpeed: number = 5;
+
+    @property({ type: CCFloat })
+    public runSpeed: number = 10;
     private currentMaxSpeed = 5;
 
     private currentMovementVector = new Vec3();
@@ -102,17 +105,69 @@ export class PlayerController extends Component {
 
     private WASDmovement = new Vec3();
 
-
     private _w = false;
     private _a = false; 
     private _s = false;
     private _d = false;
 
+    private dash = false;
+    private firstDashFrame = false;
+
+    @property({ type: CCFloat })
+    public dashForce: number = 20;
+
+    @property({ type: CCFloat })
+    public dashCooldown: number = 1;
+    private dashTimer: number = 0;
+
+    // update(dt: number) {
+    //     if (this.jumpTimer < this.jumpTimerCap) this.jumpTimer += dt;
+
+    //     const forward = this.node.forward.clone();
+    //     forward.y = 0;
+    //     forward.normalize();
+
+    //     const right = this.node.right.clone();
+    //     right.y = 0;
+    //     right.normalize();
+
+    //     this.WASDmovement = this.getTravelDirection(forward, right);
+    //     this.getOtherKeyboardInput();
+
+    //     this.checkGrounded();
+    //     const acceleration = (this.isGrounded ? this.groundAcceleration : this.airAcceleration);
+
+    //     if (this.running) this.currentMaxSpeed = this.runSpeed;
+    //     else this.currentMaxSpeed = this.walkSpeed;
+    //     if (this.WASDmovement.length() > 0) {
+    //         this.currentMovementVector.add(this.WASDmovement.multiplyScalar(acceleration * dt));
+    //         if (this.currentMovementVector.length() > this.currentMaxSpeed) {
+    //             this.currentMovementVector.normalize().multiplyScalar(this.currentMaxSpeed);
+    //         }
+    //     } else {
+    //         this.currentMovementVector.multiplyScalar((this.isGrounded ? 0.92 : 0.99));
+    //     }
+
+    //     const dashVelocity = new Vec3(0, 0, 0);
+
+    //     if (this.dash && this.firstDashFrame) {
+    //         dashVelocity.set(this.currentMovementVector.x, 0, this.currentMovementVector.z);
+    //         dashVelocity.normalize().multiplyScalar(this.dashForce);
+    //         this.firstDashFrame = false;
+    //     }
+
+    //     const velocity = new Vec3();
+    //     this.rb.getLinearVelocity(velocity);
+
+    //     velocity.x = this.currentMovementVector.x + dashVelocity.x;
+    //     velocity.z = this.currentMovementVector.z + dashVelocity.z;
+
+    //     this.rb.setLinearVelocity(velocity);
+    // }
+
     update(dt: number) {
         if (this.jumpTimer < this.jumpTimerCap) this.jumpTimer += dt;
-
-        // this.node.setRotationFromEuler(0, this.cameraNode.yaw, 0);
-        // if (this.cameraPivot) this.cameraPivot.setRotationFromEuler(this.pitch, 0, 0);
+        if (this.dashTimer < this.dashCooldown) this.dashTimer += dt;
 
         const forward = this.node.forward.clone();
         forward.y = 0;
@@ -123,28 +178,63 @@ export class PlayerController extends Component {
         right.normalize();
 
         this.WASDmovement = this.getTravelDirection(forward, right);
+        this.getOtherKeyboardInput();
 
         this.checkGrounded();
         const acceleration = (this.isGrounded ? this.groundAcceleration : this.airAcceleration);
 
-        if (this.running) this.currentMaxSpeed = this.runSpeed;
-        else this.currentMaxSpeed = this.walkSpeed;
+        this.currentMaxSpeed = this.running ? this.runSpeed : this.walkSpeed;
+
         if (this.WASDmovement.length() > 0) {
-            this.currentMovementVector.add(this.WASDmovement.multiplyScalar(acceleration * dt));
-            if (this.currentMovementVector.length() > this.currentMaxSpeed) {
-                this.currentMovementVector.normalize().multiplyScalar(this.currentMaxSpeed);
+
+            const velocity = new Vec3();
+            this.rb.getLinearVelocity(velocity);
+            const movementDirection = this.WASDmovement.clone();
+            const speedInMovementDirection =Vec3.dot(velocity, movementDirection);
+
+            if (speedInMovementDirection < this.currentMaxSpeed) {
+                const force = movementDirection.multiplyScalar(acceleration);
+                this.rb.applyForce(force);
             }
-        } else {
-            this.currentMovementVector.multiplyScalar((this.isGrounded ? 0.92 : 0.99));
+
+            // const force = this.WASDmovement.clone().multiplyScalar(acceleration);
+            // this.rb.applyForce(force);
+
         }
 
+        if (this.dash && this.firstDashFrame && this.dashTimer >= this.dashCooldown) {
+            this.dashTimer -= this.dashCooldown;
+            const dashDirection = this.WASDmovement.length() > 0
+                ? this.WASDmovement.clone()
+                : this.node.forward.clone();
+
+            dashDirection.y = 0;
+            dashDirection.normalize();
+
+            const impulse = dashDirection.multiplyScalar(this.dashForce);
+
+            this.rb.applyImpulse(impulse);
+
+            this.firstDashFrame = false;
+        }
+
+        //this.limitMovementSpeed();
+    }
+
+    limitMovementSpeed() {
         const velocity = new Vec3();
         this.rb.getLinearVelocity(velocity);
 
-        velocity.x = this.currentMovementVector.x;
-        velocity.z = this.currentMovementVector.z;
+        const horizontalVelocity = new Vec3(velocity.x, 0, velocity.z);
 
-        this.rb.setLinearVelocity(velocity);
+        if (horizontalVelocity.length() > this.currentMaxSpeed) {
+            horizontalVelocity.normalize().multiplyScalar(this.currentMaxSpeed);
+
+            velocity.x = horizontalVelocity.x;
+            velocity.z = horizontalVelocity.z;
+
+            this.rb.setLinearVelocity(velocity);
+        }
     }
 
     getTravelDirection(forward: Vec3, right: Vec3): Vec3 {
@@ -155,16 +245,20 @@ export class PlayerController extends Component {
         if (this.keys.has(KeyCode.KEY_A)) this.WASDmovement.subtract(right);
         if (this.keys.has(KeyCode.KEY_D)) this.WASDmovement.add(right);
 
-        // if (this._w) this.WASDmovement.add(forward);
-        // if (this._s) this.WASDmovement.subtract(forward);
-        // if (this._a) this.WASDmovement.subtract(right);
-        // if (this._d) this.WASDmovement.add(right);
+        return this.WASDmovement.normalize();
+    }
 
+    getOtherKeyboardInput() {
         if (this.keys.has(KeyCode.SPACE)) this.jump();
         if (this.keys.has(KeyCode.SHIFT_LEFT)) this.running = true;
         else this.running = false;
-
-        return this.WASDmovement.normalize();
+        if (this.keys.has(KeyCode.CTRL_LEFT)) {
+            if (!this.dash) this.firstDashFrame = true;
+            this.dash = true;
+        } else {
+            this.dash = false;
+            this.firstDashFrame = false;
+        }
     }
 
     checkGrounded() {
@@ -184,19 +278,26 @@ export class PlayerController extends Component {
     private jumpTimer = 1;
     private isGrounded = true;
 
+    // jump() {
+    //     //console.log("Space: " + this.isGrounded);
+    //     if (!this.isGrounded || this.jumpTimer < this.jumpTimerCap) return;
+    //     //this.isGrounded = false;
+    //     this.jumpTimer = 0;
+
+    //     const velocity = new Vec3();
+    //     this.rb.getLinearVelocity(velocity);
+
+    //     velocity.y = this.jumpForce;
+    //     this.rb.setLinearVelocity(velocity);
+
+    //     //this.rb.applyImpulse(new Vec3(0, this.jumpForce, 0));
+    // }
+
     jump() {
-        //console.log("Space: " + this.isGrounded);
         if (!this.isGrounded || this.jumpTimer < this.jumpTimerCap) return;
-        //this.isGrounded = false;
         this.jumpTimer = 0;
 
-        const velocity = new Vec3();
-        this.rb.getLinearVelocity(velocity);
-
-        velocity.y = this.jumpForce;
-        this.rb.setLinearVelocity(velocity);
-
-        //this.rb.applyImpulse(new Vec3(0, this.jumpForce, 0));
+        this.rb.applyImpulse(new Vec3(0, this.jumpForce, 0));
     }
 
     public onPlayerDeath() {

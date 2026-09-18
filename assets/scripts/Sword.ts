@@ -25,7 +25,7 @@ export class Sword extends Component {
     }
 
     onLoad() {
-        console.log("Sword loaded", this.swordCollider);
+        //console.log("Sword loaded", this.swordCollider);
         this.swordCollider.on('onTriggerEnter', this.onTriggerEnter, this);
         this.swordCollider.enabled = false;
     }
@@ -44,7 +44,7 @@ export class Sword extends Component {
     onTriggerEnter(event: ITriggerEvent) {
         const otherNode = event.otherCollider.node;
 
-        console.log("Sword trigger entered: other:" + otherNode);
+        //console.log("Sword trigger entered: other:" + otherNode);
 
         if (this.hitObjects.has(otherNode) || otherNode === this.owner) {
             return;

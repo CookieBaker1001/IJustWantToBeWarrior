@@ -915,7 +915,9 @@
     "muzzle": {
       "__id__": 32
     },
-    "damage": 75,
+    "damage": 22,
+    "pellets": 6,
+    "spread": 0.15,
     "_id": ""
   },
   {

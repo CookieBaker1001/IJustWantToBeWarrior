@@ -105,7 +105,13 @@ export class WeaponController extends Component {
 
     fireShotgun() {
         const hitPoint = this.getAimPoint();
-        this.shotgun.attack(hitPoint);
+        const direction = this.getDirection();
+        this.shotgun.attack(hitPoint, direction);
+    }
+
+    getDirection(): Vec3 {
+        const direction = this.camera.node.forward.clone();
+        return direction;
     }
 
     getAimPoint(): Vec3 {
@@ -115,7 +121,7 @@ export class WeaponController extends Component {
             this.camera.camera.height * 0.5,
             ray
         );
-        const maxDistance = (this.chosenWeapon === 0) ? 100 : 20;
+        const maxDistance = (this.chosenWeapon === 0) ? this.gun.range : this.shotgun.range;
         const endPoint = new Vec3();
         Vec3.scaleAndAdd(
             endPoint,

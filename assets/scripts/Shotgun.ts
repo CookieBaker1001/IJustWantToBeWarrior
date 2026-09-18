@@ -1,6 +1,6 @@
 import {
     _decorator, Component, Node, CCFloat, Prefab, Vec3,
-    PhysicsSystem, instantiate, Animation,
+    PhysicsSystem, instantiate, Animation, geometry,
 } from 'cc';
 const { ccclass, property } = _decorator;
 
@@ -23,6 +23,15 @@ export class Shotgun extends Component {
     @property({ type: CCFloat })
     public damage: number = 20;
 
+    @property({ type: CCFloat })
+    public pellets: number = 6;
+
+    @property({ type: CCFloat })
+    public spread: number = 0.15;
+
+    @property({ type: CCFloat })
+    public range: number = 20;
+
     start() {
 
     }
@@ -33,16 +42,52 @@ export class Shotgun extends Component {
         }
     }
 
-    public attack(hitPoint: Vec3) {
+    public attack(hitPoint: Vec3, direction: Vec3) {
         if (this.attackTimer < this.shotTimer) return;
         this.attackTimer -= this.shotTimer;
-        this.fire(hitPoint);
+
+        this.fire(hitPoint, direction);
         this.recoil.play();
     }
 
-    fire(hitPoint: Vec3) {
+    fire(hitPoint: Vec3, direction: Vec3) {
         this.spawnBeam(hitPoint);
         this.handleHit(hitPoint);
+
+        for (let i = 0; i < (this.pellets-1); i++) {
+
+            const pelletDirection = this.getRandomDirection(direction);
+
+            const ray = new geometry.Ray();
+
+            ray.o.set(this.muzzle.worldPosition);
+            ray.d.set(pelletDirection);
+
+            const hit = PhysicsSystem.instance.raycastClosest(
+                ray,
+                0xffffffff,
+                this.range
+            );
+            const endpoint = new Vec3();
+
+            if (hit) {
+                endpoint.set(
+                    PhysicsSystem.instance
+                        .raycastClosestResult
+                        .hitPoint
+                );
+            } else {
+                Vec3.scaleAndAdd(
+                    endpoint,
+                    ray.o,
+                    ray.d,
+                    this.range
+                );
+            }
+            this.spawnBeam(endpoint);
+            this.handleHit(endpoint);
+        }
+        // this.handleHit(hitPoint);
     }
 
     handleHit(hitPoint: Vec3) {
@@ -74,6 +119,32 @@ export class Shotgun extends Component {
 
         const length = Vec3.distance(start, endPoint);
         tracer.setScale(1, 1, length);
+    }
+
+    getRandomDirection(direction: Vec3): Vec3 {
+        // const result = direction.clone();
+        // const randomX = (Math.random() - 0.5) * spread;
+        // const randomY = (Math.random() - 0.5) * spread;
+        // result.x += randomX;
+        // result.y += randomY;
+        // result.normalize();
+        // return result;
+
+        const forward = direction.clone().normalize();
+        const up = new Vec3(0, 1, 0);
+        const right = new Vec3();
+        Vec3.cross(right, forward, up);
+        right.normalize();
+        const correctedUp = new Vec3();
+        Vec3.cross(correctedUp, right, forward);
+        correctedUp.normalize();
+        const horizontal = (Math.random() - 0.5) * this.spread;
+        const vertical = (Math.random() - 0.5) * this.spread;
+        const result = forward.clone();
+        Vec3.scaleAndAdd(result, result, right, horizontal);
+        Vec3.scaleAndAdd(result, result, correctedUp, vertical);
+        result.normalize();
+        return result;
     }
 }
 

@@ -1,12 +1,13 @@
 import {
     _decorator, Component, Node, find, CCFloat, Vec3, RigidBody,
-    PhysicsSystem, geometry
+    PhysicsSystem, geometry, Sprite, Prefab, instantiate
 } from 'cc';
 const { ccclass, property } = _decorator; 
 
 import { Gun } from './Gun';
 import { Sword } from './Sword';
 import { Shotgun } from './Shotgun';
+import { HealthScript } from './HealthScript';
 
 @ccclass('EnemyScript')
 export class EnemyScript extends Component {
@@ -18,23 +19,33 @@ export class EnemyScript extends Component {
     public stopDistance: number = 4; // Meters before stopping
 
     @property({ type: CCFloat })
+    public attackRange: number = 5; // Meters for attack range
+
+    @property({ type: CCFloat })
     public attackSpeed: number = 2.2; // Seconds between attacks
     private attackTimer: number = 0; // Timer to track attack cooldown
 
-    @property({ type: Gun })
-    public gun: Gun | null = null; // Reference to the Gun component
+    @property({ type: CCFloat })
+    public weaponType: number = 0; // 1 = Gun, 2 = Sword, 3 = Shotgun
 
-    @property({ type: Sword })
-    public sword: Sword | null = null; // Reference to the Sword component
+    @property({ type: Node })
+    public weaponNode: Node | null = null; // Reference to the weapon node
 
-    @property({ type: Shotgun })
-    public shotgun: Shotgun | null = null; // Reference to the Shotgun component
+    private gun: Gun | null = null; // Reference to the Gun component
+    private sword: Sword | null = null; // Reference to the Sword component
+    private shotgun: Shotgun | null = null; // Reference to the Shotgun component
+
+    @property({ type: Prefab })
+    public explosionPrefab: Prefab | null = null; // Reference to the explosion prefab
 
     @property({ type: Node })
     public eyes: Node | null = null; // Reference to the eyes node for aiming
 
     @property([Node])
     public faces: Node[] = [];
+
+    @property({ type: Sprite })
+    public attackWindupSprite: Sprite | null = null;
 
     private rb: RigidBody | null = null;
     private target: Node | null = null
@@ -47,6 +58,8 @@ export class EnemyScript extends Component {
     private groundAcceleration = 18;
     private airAcceleration = 0.05;
 
+    private hpScript: HealthScript | null = null;
+
     start() {
         const index = Math.floor(Math.random() * this.faces.length);
         this.faces.forEach((face, i) => {
@@ -55,6 +68,18 @@ export class EnemyScript extends Component {
         this.rb = this.node.getComponent(RigidBody);
         //this.eyes = this.node.getChildByName("Eyes");
         this.pivot = this.node.getChildByName("Pivot");
+
+
+        // Fetches the appropriate weapon in the cild of the weapon node based on the weaponType property
+        if (this.weaponType === 1) {
+            this.gun = this.weaponNode?.getChildByName("Pistol")?.getComponent(Gun);
+        } else if (this.weaponType === 2) {
+            this.sword = this.weaponNode?.getChildByName("Sword")?.getComponent(Sword);
+        } else if (this.weaponType === 3) {
+            this.shotgun = this.weaponNode?.getChildByName("Shotgun")?.getComponent(Shotgun);
+        }
+
+        this.hpScript = this.node.getComponent(HealthScript);
     }
 
     tmpTargetPos: Vec3;
@@ -68,25 +93,37 @@ export class EnemyScript extends Component {
 
         this.lookDirection = this.getMovementDirection(this.node, this.target);
         this.movementDirection = this.lookDirection.clone();
-        if (this.movementDirection.length() < this.stopDistance) {
-            this.movementDirection.set(0, 0, 0);
-            this.attackTimer += dt;
-            if (this.attackTimer >= this.attackSpeed) {
-                this.attackTimer -= this.attackTimer;
 
-                if (this.gun) {
+        if (this.movementDirection.length() < this.attackRange) {
+
+            this.attackTimer += dt;
+            this.updateAttackTimerUI();
+
+            if (this.attackTimer >= this.attackSpeed) {
+                this.attackTimer -= this.attackSpeed;
+
+                if (this.weaponType === 1) {
                     const hitPoint = this.getAimPoint();
                     this.gun.attack(hitPoint);
-                } else if (this.sword) {
+                } else if (this.weaponType === 2) {
                     this.sword.attack();
-                } else {
+                } else if (this.weaponType === 3) {
                     const hitPoint = this.getAimPoint();
-                    this.shotgun.attack(hitPoint);
+                    this.shotgun.attack(hitPoint, this.eyes.forward.clone());
+                } else if (this.weaponType === 4) {
+                    this.blowUp();
+                } else {
+                    console.log("Unknown weapon type / I don't have a weapon");
                 }
             }
-            
+
+            if (this.movementDirection.length() < this.stopDistance) {
+                this.movementDirection.set(0, 0, 0);
+            }
         } else {
             this.movementDirection.normalize();
+            this.attackTimer = Math.max(0, this.attackTimer - (dt / 4));
+            this.updateAttackTimerUI();
         }
         this.rotateToTarget(this.pivot, this.target);
 
@@ -202,6 +239,14 @@ export class EnemyScript extends Component {
 
     findTarget() {
         this.target = find('Player');
+    }
+
+    blowUp() {
+        this.hpScript.blowUp();
+    }
+
+    updateAttackTimerUI() {
+        this.attackWindupSprite.node.scale = new Vec3((this.attackTimer / this.attackSpeed), 1, 1);
     }
 }
 
