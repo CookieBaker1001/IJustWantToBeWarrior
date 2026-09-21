@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "1f72ebfc-6b9d-4a71-9c2c-018c0fd53bcc",
+  "uuid": "17b743c5-3f50-4a96-b39d-13428f48673f",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "1f72ebfc-6b9d-4a71-9c2c-018c0fd53bcc@6c48a",
-      "displayName": "jagkannermarrangen",
+      "uuid": "17b743c5-3f50-4a96-b39d-13428f48673f@6c48a",
+      "displayName": "mejoviktor.PNG",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "1f72ebfc-6b9d-4a71-9c2c-018c0fd53bcc",
+        "imageUuidOrDatabaseUri": "17b743c5-3f50-4a96-b39d-13428f48673f",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "fixAlphaTransparencyArtifacts": false,
     "hasAlpha": true,
-    "redirect": "1f72ebfc-6b9d-4a71-9c2c-018c0fd53bcc@6c48a"
+    "redirect": "17b743c5-3f50-4a96-b39d-13428f48673f@6c48a"
   }
 }

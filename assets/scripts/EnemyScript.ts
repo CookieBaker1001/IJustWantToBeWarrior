@@ -8,6 +8,7 @@ import { Gun } from './Gun';
 import { Sword } from './Sword';
 import { Shotgun } from './Shotgun';
 import { HealthScript } from './HealthScript';
+import { RB_System } from './RB_System';
 
 @ccclass('EnemyScript')
 export class EnemyScript extends Component {
@@ -53,7 +54,6 @@ export class EnemyScript extends Component {
 
     private movementDirection: Vec3 = new Vec3(0, 0, 0);
     private lookDirection: Vec3 = new Vec3(0, 0, 0);
-    private currentMovementVector = new Vec3();
 
     private groundAcceleration = 18;
     private airAcceleration = 0.05;
@@ -66,9 +66,9 @@ export class EnemyScript extends Component {
             face.active = (i === index);
         });
         this.rb = this.node.getComponent(RigidBody);
+        RB_System.instance?.registerBody(this.rb);
         //this.eyes = this.node.getChildByName("Eyes");
         this.pivot = this.node.getChildByName("Pivot");
-
 
         // Fetches the appropriate weapon in the cild of the weapon node based on the weaponType property
         if (this.weaponType === 1) {
@@ -94,6 +94,11 @@ export class EnemyScript extends Component {
         this.lookDirection = this.getMovementDirection(this.node, this.target);
         this.movementDirection = this.lookDirection.clone();
 
+        this.rotateToTarget(this.pivot, this.target);
+
+        this.checkGrounded();
+        const acceleration = (this.isGrounded ? this.groundAcceleration : this.airAcceleration);
+
         if (this.movementDirection.length() < this.attackRange) {
 
             this.attackTimer += dt;
@@ -101,20 +106,7 @@ export class EnemyScript extends Component {
 
             if (this.attackTimer >= this.attackSpeed) {
                 this.attackTimer -= this.attackSpeed;
-
-                if (this.weaponType === 1) {
-                    const hitPoint = this.getAimPoint();
-                    this.gun.attack(hitPoint);
-                } else if (this.weaponType === 2) {
-                    this.sword.attack();
-                } else if (this.weaponType === 3) {
-                    const hitPoint = this.getAimPoint();
-                    this.shotgun.attack(hitPoint, this.eyes.forward.clone());
-                } else if (this.weaponType === 4) {
-                    this.blowUp();
-                } else {
-                    console.log("Unknown weapon type / I don't have a weapon");
-                }
+                this.performAttack();
             }
 
             if (this.movementDirection.length() < this.stopDistance) {
@@ -125,31 +117,108 @@ export class EnemyScript extends Component {
             this.attackTimer = Math.max(0, this.attackTimer - (dt / 4));
             this.updateAttackTimerUI();
         }
-        this.rotateToTarget(this.pivot, this.target);
 
-        this.checkGrounded();
-        this.tryTojump();
-        const acceleration = (this.isGrounded ? this.groundAcceleration : this.airAcceleration);
+        const velocity = new Vec3();
+        this.rb.getLinearVelocity(velocity);
+        let resultingForce = new Vec3();
 
         if (this.movementDirection.length() > 0) {
-            this.currentMovementVector.add(this.movementDirection.multiplyScalar(acceleration * dt));
-            if (this.currentMovementVector.length() > this.speed) {
-                this.currentMovementVector.normalize().multiplyScalar(this.speed);
+            const desiredMovementDirection = this.movementDirection.clone();
+            const speedInMovementDirection = Vec3.dot(velocity, desiredMovementDirection);
+            if (speedInMovementDirection < this.speed) {
+                resultingForce = desiredMovementDirection.multiplyScalar(acceleration);
             }
-        } else {
-            this.currentMovementVector.multiplyScalar((this.isGrounded ? 0.92 : 0.99));
         }
+        const counterForce = this.getCounterForce();
+        const totalForce = resultingForce.add(counterForce);
+        this.rb.applyForce(totalForce);
+
+        // if (this.movementDirection.length() > 0) {
+
+        //     const velocity = new Vec3();
+        //     this.rb.getLinearVelocity(velocity);
+        //     const movementDirection = this.movementDirection.clone();
+        //     const speedInMovementDirection = Vec3.dot(velocity, movementDirection);
+
+        //     if (speedInMovementDirection < this.speed) {
+        //         const force = movementDirection.multiplyScalar(acceleration);
+        //         this.rb.applyForce(force);
+        //     }
+        // }
+
+        // if (this.movementDirection.length() > 0) {
+        //     this.currentMovementVector.add(this.movementDirection.multiplyScalar(acceleration * dt));
+        //     if (this.currentMovementVector.length() > this.speed) {
+        //         this.currentMovementVector.normalize().multiplyScalar(this.speed);
+        //     }
+        // } else {
+        //     this.currentMovementVector.multiplyScalar((this.isGrounded ? 0.92 : 0.99));
+        // }
+
+        // const velocity = new Vec3();
+        // this.rb.getLinearVelocity(velocity);
+
+        // velocity.x = this.currentMovementVector.x;
+        // velocity.z = this.currentMovementVector.z;
+
+        // this.rb.setLinearVelocity(velocity);
+
+        if (this.node.worldPosition.y < -10) {
+            this.healthScript?.takeDamage(9999);
+        }
+    }
+
+    getCounterForce(): Vec3 {
 
         const velocity = new Vec3();
         this.rb.getLinearVelocity(velocity);
 
-        velocity.x = this.currentMovementVector.x;
-        velocity.z = this.currentMovementVector.z;
+        // Only consider horizontal movement
+        velocity.y = 0;
+        const speed = velocity.length();
 
-        this.rb.setLinearVelocity(velocity);
+        // No movement = no counterforce
+        if (speed < 0.001) return new Vec3();
 
-        if (this.node.worldPosition.y < -10) {
-            this.node.destroy();
+        const velocityDirection = velocity.clone().normalize();
+        const desiredDirection = this.movementDirection.clone();
+        desiredDirection.y = 0;
+        let dot;
+
+        if (desiredDirection.length() > 0.001) {
+            desiredDirection.normalize();
+            dot = Vec3.dot(velocityDirection, desiredDirection);
+        } else {
+            dot = 0; // No desired direction, treat as perpendicular
+        }
+        // 0 when aligned, 1 when perpendicular,
+        // 1 when moving completely opposite as well.
+        const counterForceFactor = Math.max(0, Math.min(1, 1 - dot));
+
+        // Opposite the current velocity
+        return velocityDirection.multiplyScalar(-counterForceFactor * speed);
+
+        // const velocity = new Vec3();
+        // this.rb.getLinearVelocity(velocity);
+        // velocity.normalize();
+        // const dot = Vec3.dot(this.node.forward, velocity);
+        // const res = velocity.clone().multiplyScalar(Math.max(0, Math.min(1, 1 - dot)));
+        // return res;
+    }
+
+    performAttack() {
+        if (this.weaponType === 1) {
+            const hitPoint = this.getAimPoint();
+            this.gun.attack(hitPoint);
+        } else if (this.weaponType === 2) {
+            this.sword.attack();
+        } else if (this.weaponType === 3) {
+            const hitPoint = this.getAimPoint();
+            this.shotgun.attack(hitPoint, this.eyes.forward.clone());
+        } else if (this.weaponType === 4) {
+            this.blowUp();
+        } else {
+            console.log("Unknown weapon type / I don't have a weapon");
         }
     }
 

@@ -2,6 +2,7 @@ import {
     _decorator, Component, CCFloat, geometry, PhysicsSystem, Vec3, RigidBody,
     ParticleSystem, SphereCollider, ITriggerEvent, Node,
 } from 'cc';
+import { RB_System } from './RB_System';
 const { ccclass, property } = _decorator;
 
 @ccclass('Explosion')
@@ -28,19 +29,23 @@ export class Explosion extends Component {
     @property({ type: CCFloat })
     public explosionWindow: number = 0.05;
 
-    private collider: SphereCollider;
+    //private collider: SphereCollider;
     private detonated: boolean = false;
     private explosionTimer: number = 0;
 
     onLoad() {
-        this.collider = this.getComponent(SphereCollider);
-        if (!this.collider) {
-            console.error("Explosion has no SphereCollider!");
-            return;
-        }
-        this.collider.radius = this.radius;
-        this.collider.on('onTriggerEnter', this.onTriggerEnter, this);
-        this.collider.enabled = false;
+        // this.collider = this.getComponent(SphereCollider);
+        // if (!this.collider) {
+        //     console.error("Explosion has no SphereCollider!");
+        //     return;
+        // }
+        // this.collider.radius = this.radius;
+        // this.collider.on('onTriggerEnter', this.onTriggerEnter, this);
+        // this.collider.enabled = false;
+    }
+
+    onDestroy() {
+        //this.collider?.off('onTriggerEnter', this.onTriggerEnter, this);
     }
 
     start() {
@@ -52,39 +57,44 @@ export class Explosion extends Component {
         console.log("BOOM");
         this.detonated = true;
         this.explosionTimer = this.explosionWindow;
-        //this.affectedBodies.clear();
-        this.collider.enabled = true;
+        this.affectedBodies.clear();
+        //this.collider.enabled = true;
         this.explosionEffect?.play();
+
+        const affected = RB_System.instance?.getBodiesInRadius(this.node.getWorldPosition(), this.radius);
+        if (affected) {
+            this.affectedBodies = new Set(affected);
+        }
     }
 
     private affectedBodies = new Set<RigidBody>();
 
-    private onTriggerEnter(event: ITriggerEvent) {
+    // private onTriggerEnter(event: ITriggerEvent) {
 
-        //console.log("Trigger enter", event.otherCollider.node.name);
-        const other = event.otherCollider.node;
-        const rb = this.findRigidBody(other);
-        if (!rb) {
-            return;
-        }
-        if (this.affectedBodies.has(rb)) {
-            return;
-        }
-        this.affectedBodies.add(rb);
-    }
+    //     //console.log("Trigger enter", event.otherCollider.node.name);
+    //     const other = event.otherCollider.node;
+    //     const rb = this.findRigidBody(other);
+    //     if (!rb) {
+    //         return;
+    //     }
+    //     if (this.affectedBodies.has(rb)) {
+    //         return;
+    //     }
+    //     this.affectedBodies.add(rb);
+    // }
 
-    private findRigidBody(node: Node): RigidBody | null {
+    // private findRigidBody(node: Node): RigidBody | null {
 
-        let current: Node | null = node;
-        while (current) {
-            const rb = current.getComponent(RigidBody);
-            if (rb) {
-                return rb;
-            }
-            current = current.parent;
-        }
-        return null;
-    }
+    //     let current: Node | null = node;
+    //     while (current) {
+    //         const rb = current.getComponent(RigidBody);
+    //         if (rb) {
+    //             return rb;
+    //         }
+    //         current = current.parent;
+    //     }
+    //     return null;
+    // }
 
     update(dt: number) {
         if (!this.detonated) {
@@ -98,7 +108,7 @@ export class Explosion extends Component {
         if (this.explosionTimer > 0) {
             this.explosionTimer -= dt;
             if (this.explosionTimer <= 0) {
-                this.collider.enabled = false;
+                //this.collider.enabled = false;
                 this.applyExplosion();
             }
             return;
@@ -114,15 +124,15 @@ export class Explosion extends Component {
         //console.log("Elo");
         const center = this.node.getWorldPosition();
         for (const rb of this.affectedBodies) {
-            //console.log("Applying explosion", this.affectedBodies.size, rb.node.name);
+            console.log("Applying explosion", this.affectedBodies.size, rb.node.name);
             const objectPosition = rb.node.getWorldPosition();
             const direction = new Vec3();
             Vec3.subtract(direction, objectPosition, center);
             const distance = direction.length();
             if (distance < 0.001) continue;
             direction.normalize();
-            const radius = this.collider.radius;
-            const strenght = (1 - distance / radius);
+            //const radius = this.collider.radius;
+            const strenght = (1 - distance / this.radius);
             const impulse = this.force * strenght;
             direction.multiplyScalar(impulse);
             rb.applyImpulse(direction);

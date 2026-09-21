@@ -1,6 +1,6 @@
 import {
     _decorator, Component, Node, input, Input, EventKeyboard, Camera, Prefab, KeyCode,
-    EventMouse, PhysicsSystem, geometry, Vec3, instantiate, Animation,
+    EventMouse, PhysicsSystem, geometry, Vec3, instantiate, Animation, Label,
     CCInteger,
 } from 'cc';
 const { ccclass, property } = _decorator;
@@ -29,6 +29,20 @@ export class WeaponController extends Component {
     @property({ type: CCInteger })
     private chosenWeapon: number = 0;
 
+    @property({ type: CCInteger })
+    private startPistolAmmo: number = 0;
+    private pistolAmmo: number = 0;
+
+    @property({ type: CCInteger })
+    private startShotgunAmmo: number = 0;
+    private shotgunAmmo: number = 0;
+
+    @property({ type: Label })
+    public pistolAmmoLabel: Label | null = null;
+
+    @property({ type: Label })
+    public shotgunAmmoLabel: Label | null = null;
+
     start() {
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
 
@@ -38,6 +52,12 @@ export class WeaponController extends Component {
         this.gun = this.weapon1?.getComponent(Gun) || null;
         this.sword = this.weapon2?.getComponent(Sword) || null;
         this.shotgun = this.weapon3?.getComponent(Shotgun) || null;
+
+        this.pistolAmmo = this.startPistolAmmo;
+        this.shotgunAmmo = this.startShotgunAmmo;
+
+        this.updateAmmoLabels(0);
+        this.updateAmmoLabels(1);
     }
 
     onDestroy() {
@@ -98,15 +118,26 @@ export class WeaponController extends Component {
         this.sword.attack();
     }
 
+    private successfullyFired: boolean = false;
     firePistol() {
+        if (this.pistolAmmo <= 0) return;
         const hitPoint = this.getAimPoint();
-        this.gun.attack(hitPoint);
+        this.successfullyFired = this.gun.attack(hitPoint);
+        if (this.successfullyFired) {
+            this.pistolAmmo--;
+            this.updateAmmoLabels(0);
+        }
     }
 
     fireShotgun() {
+        if (this.shotgunAmmo <= 0) return;
         const hitPoint = this.getAimPoint();
         const direction = this.getDirection();
-        this.shotgun.attack(hitPoint, direction);
+        this.successfullyFired = this.shotgun.attack(hitPoint, direction);
+        if (this.successfullyFired) {
+            this.shotgunAmmo--;
+            this.updateAmmoLabels(1);
+        }
     }
 
     getDirection(): Vec3 {
@@ -141,6 +172,24 @@ export class WeaponController extends Component {
                 .clone();
         }
         return endPoint;
+    }
+
+    public replenish(amount: number, ammoType: number) {
+        if (ammoType === 0) {
+            this.pistolAmmo += amount;
+            this.updateAmmoLabels(0);
+        } else if (ammoType === 1) {
+            this.shotgunAmmo += amount;
+            this.updateAmmoLabels(1);
+        }
+    }
+
+    private updateAmmoLabels(ammoType: number) {
+        if (ammoType === 0 && this.pistolAmmoLabel) {
+            this.pistolAmmoLabel.string = "x" + this.pistolAmmo;
+        } else if (ammoType === 1 && this.shotgunAmmoLabel) {
+            this.shotgunAmmoLabel.string = "x" + this.shotgunAmmo;
+        }
     }
 }
 

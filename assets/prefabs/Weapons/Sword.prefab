@@ -555,6 +555,9 @@
     "swordCollider": {
       "__id__": 6
     },
+    "blade": {
+      "__id__": 2
+    },
     "damage": 70,
     "owner": null,
     "_id": ""

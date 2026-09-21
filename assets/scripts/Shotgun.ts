@@ -42,12 +42,12 @@ export class Shotgun extends Component {
         }
     }
 
-    public attack(hitPoint: Vec3, direction: Vec3) {
-        if (this.attackTimer < this.shotTimer) return;
+    public attack(hitPoint: Vec3, direction: Vec3) : boolean {
+        if (this.attackTimer < this.shotTimer) return false;
         this.attackTimer -= this.shotTimer;
-
         this.fire(hitPoint, direction);
         this.recoil.play();
+        return true;
     }
 
     fire(hitPoint: Vec3, direction: Vec3) {

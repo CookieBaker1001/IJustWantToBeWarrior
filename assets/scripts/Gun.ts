@@ -39,11 +39,12 @@ export class Gun extends Component {
         }
     }
 
-    public attack(hitPoint: Vec3) {
-        if (this.attackTimer < this.shotTimer) return;
+    public attack(hitPoint: Vec3): boolean {
+        if (this.attackTimer < this.shotTimer) return false;
         this.attackTimer -= this.shotTimer;
         this.fire(hitPoint);
         this.recoil.play();
+        return true;
     }
 
     fire(hitPoint: Vec3) {

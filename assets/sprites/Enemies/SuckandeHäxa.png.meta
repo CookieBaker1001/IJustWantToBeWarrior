@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "bdd5faf9-99cf-4efe-9c33-8f7a093451e5",
+  "uuid": "f08d3a60-4aaa-4469-b476-ae8645fffa0c",
   "files": [
     ".json",
     ".png"
@@ -10,19 +10,19 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "bdd5faf9-99cf-4efe-9c33-8f7a093451e5@6c48a",
-      "displayName": "gosta",
+      "uuid": "f08d3a60-4aaa-4469-b476-ae8645fffa0c@6c48a",
+      "displayName": "SuckandeHäxa",
       "id": "6c48a",
       "name": "texture",
       "userData": {
-        "wrapModeS": "clamp-to-edge",
-        "wrapModeT": "clamp-to-edge",
+        "wrapModeS": "repeat",
+        "wrapModeT": "repeat",
         "minfilter": "linear",
         "magfilter": "linear",
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "bdd5faf9-99cf-4efe-9c33-8f7a093451e5",
+        "imageUuidOrDatabaseUri": "f08d3a60-4aaa-4469-b476-ae8645fffa0c",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "fixAlphaTransparencyArtifacts": false,
     "hasAlpha": true,
-    "redirect": "bdd5faf9-99cf-4efe-9c33-8f7a093451e5@6c48a"
+    "redirect": "f08d3a60-4aaa-4469-b476-ae8645fffa0c@6c48a"
   }
 }

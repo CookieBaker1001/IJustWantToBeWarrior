@@ -2,7 +2,7 @@
   "ver": "1.0.27",
   "importer": "image",
   "imported": true,
-  "uuid": "1b436d10-b76d-478a-897d-899d77034712",
+  "uuid": "fa94e815-d4b3-456d-ac6b-6069fcf10bd6",
   "files": [
     ".json",
     ".png"
@@ -10,8 +10,8 @@
   "subMetas": {
     "6c48a": {
       "importer": "texture",
-      "uuid": "1b436d10-b76d-478a-897d-899d77034712@6c48a",
-      "displayName": "inzoomatpaEmil",
+      "uuid": "fa94e815-d4b3-456d-ac6b-6069fcf10bd6@6c48a",
+      "displayName": "IngenMorotIngenPajOkej.PNG",
       "id": "6c48a",
       "name": "texture",
       "userData": {
@@ -22,7 +22,7 @@
         "mipfilter": "none",
         "anisotropy": 0,
         "isUuid": true,
-        "imageUuidOrDatabaseUri": "1b436d10-b76d-478a-897d-899d77034712",
+        "imageUuidOrDatabaseUri": "fa94e815-d4b3-456d-ac6b-6069fcf10bd6",
         "visible": false
       },
       "ver": "1.0.22",
@@ -37,6 +37,6 @@
     "type": "texture",
     "fixAlphaTransparencyArtifacts": false,
     "hasAlpha": true,
-    "redirect": "1b436d10-b76d-478a-897d-899d77034712@6c48a"
+    "redirect": "fa94e815-d4b3-456d-ac6b-6069fcf10bd6@6c48a"
   }
 }

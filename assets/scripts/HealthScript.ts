@@ -2,6 +2,7 @@ import {
     _decorator, Component, CCFloat, Label, Sprite,
     Vec3, find, Node, ProgressBar, Prefab, instantiate,
 } from 'cc';
+import { RB_System } from './RB_System';
 const { ccclass, property } = _decorator;
 
 @ccclass('HealthScript')
@@ -23,8 +24,8 @@ export class HealthScript extends Component {
     @property({ type: CCFloat })
     public maxHealth: number = 100;
 
-    @property({ type: Prefab })
-    public deathPrefab: Prefab | null = null;
+    @property([Prefab])
+    public deathPrefabs: Prefab[] = [];
 
     private currentHealth: number = this.maxHealth;
 
@@ -79,7 +80,7 @@ export class HealthScript extends Component {
             const effect = instantiate(this.healEffect);
             this.node.scene!.addChild(effect);
             effect.setWorldPosition(this.node.worldPosition.clone());
-            console.log("Spawned heal effect", effect.getWorldPosition());
+            //console.log("Spawned heal effect", effect.getWorldPosition());
         }
     }
 
@@ -95,7 +96,7 @@ export class HealthScript extends Component {
     }
 
     public blowUp() {
-        console.log("Blew up by comming close to player");
+        //console.log("Blew up by comming close to player");
         this.die();
     }
 
@@ -103,13 +104,21 @@ export class HealthScript extends Component {
         if (this.isDead) return;
         this.isDead = true;
         //console.log("Died");
-        if (this.deathPrefab !== null) {
-            const object = instantiate(this.deathPrefab);
+
+        for (const prefab of this.deathPrefabs) {
+            const object = instantiate(prefab);
             object.setWorldPosition(this.node.worldPosition.clone());
             this.node.scene!.addChild(object);
-            //console.log("Successfully instantiated death prefab at: " + this.node.worldPosition);
-            //console.log(object);
         }
+
+        // if (this.deathPrefab !== null) {
+        //     const object = instantiate(this.deathPrefab);
+        //     object.setWorldPosition(this.node.worldPosition.clone());
+        //     this.node.scene!.addChild(object);
+        //     //console.log("Successfully instantiated death prefab at: " + this.node.worldPosition);
+        //     //console.log(object);
+        // }
+        RB_System.instance?.unregisterBody_N(this.node);
         this.node.destroy();
     }
 }

@@ -1,4 +1,5 @@
-import { _decorator, CCFloat, Component, Node, Prefab, instantiate } from 'cc';
+import { _decorator, CCFloat, Component, Node, Prefab, instantiate, RigidBody } from 'cc';
+import { RB_System } from './RB_System';
 const { ccclass, property } = _decorator;
 
 @ccclass('EnemySpawner')
@@ -30,10 +31,16 @@ export class EnemySpawner extends Component {
             const randomPosition = Math.floor(Math.random() * this.spawnPositions.length);
             const position = this.spawnPositions[randomPosition];
             
-            const enemy = instantiate(this.enemyPrefabs[randomEnemy]);
-            enemy.setParent(this.enemiesParent);
-            enemy.setPosition(position.getPosition());
+            this.spawnEnemy(randomEnemy, position);
         }
+    }
+
+    spawnEnemy(randomEnemy: number, position: Node) {
+        const enemy = instantiate(this.enemyPrefabs[randomEnemy]);
+        enemy.setParent(this.enemiesParent);
+        enemy.setPosition(position.getPosition());
+
+        //RB_System.instance?.registerBody(enemy.getComponent('RigidBody'));
     }
 }
 

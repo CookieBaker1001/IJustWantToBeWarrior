@@ -2,12 +2,12 @@
   "ver": "1.1.50",
   "importer": "prefab",
   "imported": true,
-  "uuid": "e4e19ba9-a5ba-491b-9f51-a6e118517616",
+  "uuid": "0b7b277d-15e9-4cfc-b2a7-c2e6412385d7",
   "files": [
     ".json"
   ],
   "subMetas": {},
   "userData": {
-    "syncNodeName": "XP"
+    "syncNodeName": "PistolAmmo"
   }
 }

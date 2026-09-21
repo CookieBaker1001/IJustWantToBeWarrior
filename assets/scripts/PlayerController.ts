@@ -2,6 +2,7 @@ import {
     _decorator, Component, Node, RigidBody, input, Input, EventKeyboard, KeyCode,
     EventMouse, Vec3, PhysicsSystem, geometry, game, CCFloat
 } from 'cc';
+import { RB_System } from './RB_System';
 const { ccclass, property } = _decorator;
 
 @ccclass('PlayerController')
@@ -24,6 +25,8 @@ export class PlayerController extends Component {
 
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         input.on(Input.EventType.KEY_UP, this.onKeyUp, this);
+
+        RB_System.instance?.registerBody(this.rb);
     }
 
     onDestroy() {
@@ -98,8 +101,6 @@ export class PlayerController extends Component {
     public runSpeed: number = 10;
     private currentMaxSpeed = 5;
 
-    private currentMovementVector = new Vec3();
-
     private groundAcceleration = 18;
     private airAcceleration = 0.05;
 
@@ -120,50 +121,7 @@ export class PlayerController extends Component {
     public dashCooldown: number = 1;
     private dashTimer: number = 0;
 
-    // update(dt: number) {
-    //     if (this.jumpTimer < this.jumpTimerCap) this.jumpTimer += dt;
-
-    //     const forward = this.node.forward.clone();
-    //     forward.y = 0;
-    //     forward.normalize();
-
-    //     const right = this.node.right.clone();
-    //     right.y = 0;
-    //     right.normalize();
-
-    //     this.WASDmovement = this.getTravelDirection(forward, right);
-    //     this.getOtherKeyboardInput();
-
-    //     this.checkGrounded();
-    //     const acceleration = (this.isGrounded ? this.groundAcceleration : this.airAcceleration);
-
-    //     if (this.running) this.currentMaxSpeed = this.runSpeed;
-    //     else this.currentMaxSpeed = this.walkSpeed;
-    //     if (this.WASDmovement.length() > 0) {
-    //         this.currentMovementVector.add(this.WASDmovement.multiplyScalar(acceleration * dt));
-    //         if (this.currentMovementVector.length() > this.currentMaxSpeed) {
-    //             this.currentMovementVector.normalize().multiplyScalar(this.currentMaxSpeed);
-    //         }
-    //     } else {
-    //         this.currentMovementVector.multiplyScalar((this.isGrounded ? 0.92 : 0.99));
-    //     }
-
-    //     const dashVelocity = new Vec3(0, 0, 0);
-
-    //     if (this.dash && this.firstDashFrame) {
-    //         dashVelocity.set(this.currentMovementVector.x, 0, this.currentMovementVector.z);
-    //         dashVelocity.normalize().multiplyScalar(this.dashForce);
-    //         this.firstDashFrame = false;
-    //     }
-
-    //     const velocity = new Vec3();
-    //     this.rb.getLinearVelocity(velocity);
-
-    //     velocity.x = this.currentMovementVector.x + dashVelocity.x;
-    //     velocity.z = this.currentMovementVector.z + dashVelocity.z;
-
-    //     this.rb.setLinearVelocity(velocity);
-    // }
+    private counterForce = 1.0;
 
     update(dt: number) {
         if (this.jumpTimer < this.jumpTimerCap) this.jumpTimer += dt;
@@ -185,22 +143,80 @@ export class PlayerController extends Component {
 
         this.currentMaxSpeed = this.running ? this.runSpeed : this.walkSpeed;
 
+        const velocity = new Vec3();
+        this.rb.getLinearVelocity(velocity);
+        let resultingForce = new Vec3();
+
         if (this.WASDmovement.length() > 0) {
-
-            const velocity = new Vec3();
-            this.rb.getLinearVelocity(velocity);
             const movementDirection = this.WASDmovement.clone();
-            const speedInMovementDirection =Vec3.dot(velocity, movementDirection);
-
+            const speedInMovementDirection = Vec3.dot(velocity, movementDirection);
             if (speedInMovementDirection < this.currentMaxSpeed) {
-                const force = movementDirection.multiplyScalar(acceleration);
-                this.rb.applyForce(force);
+                resultingForce = movementDirection.multiplyScalar(acceleration);
             }
-
-            // const force = this.WASDmovement.clone().multiplyScalar(acceleration);
-            // this.rb.applyForce(force);
-
         }
+        const counterForce = this.getCounterForce();
+        const totalForce = resultingForce.add(counterForce);
+        this.rb.applyForce(totalForce);
+
+        // if (this.WASDmovement.length() > 0) {
+            
+        //     const movementDirection = this.WASDmovement.clone();
+        //     const speedInMovementDirection = Vec3.dot(velocity, movementDirection);
+
+        //     if (speedInMovementDirection < this.currentMaxSpeed) {
+        //         const force = movementDirection.multiplyScalar(acceleration);
+        //         const counterForce = this.getCounterForce();
+        //         const totalForce = force.subtract(counterForce);
+        //         this.rb.applyForce(totalForce);
+        //     }
+
+        //     // let force = movementDirection.multiplyScalar(acceleration);
+
+        //     // // Only apply counterforce while grounded
+        //     // if (this.isGrounded) {
+
+        //     //     // Only horizontal velocity matters
+        //     //     const horizontalVelocity = new Vec3(
+        //     //         velocity.x,
+        //     //         0,
+        //     //         velocity.z
+        //     //     );
+
+        //     //     const speed = horizontalVelocity.length();
+
+        //     //     if (speed > 0.001) {
+
+        //     //         const velocityDirection =
+        //     //             horizontalVelocity.clone().normalize();
+
+        //     //         // 1 = perfectly aligned
+        //     //         // 0 = perpendicular
+        //     //         // -1 = completely opposite
+        //     //         const alignment =
+        //     //             Vec3.dot(velocityDirection, movementDirection);
+
+        //     //         // 0 = aligned
+        //     //         // 0.5 = perpendicular
+        //     //         // 1 = opposite
+        //     //         const misalignment =
+        //     //             (1 - alignment) / 2;
+
+        //     //         const counterForceStrength =
+        //     //             this.counterForce * speed * misalignment;
+
+        //     //         const counterForce =
+        //     //             velocityDirection
+        //     //                 .clone()
+        //     //                 .multiplyScalar(-counterForceStrength);
+
+        //     //         force.add(counterForce);
+        //     //     }
+        //     // }
+
+        //     // if (speedInMovementDirection < this.currentMaxSpeed) {
+        //     //     this.rb.applyForce(force);
+        //     // }
+        // }
 
         if (this.dash && this.firstDashFrame && this.dashTimer >= this.dashCooldown) {
             this.dashTimer -= this.dashCooldown;
@@ -217,25 +233,60 @@ export class PlayerController extends Component {
 
             this.firstDashFrame = false;
         }
-
-        //this.limitMovementSpeed();
     }
 
-    limitMovementSpeed() {
+    getCounterForce(): Vec3 {
         const velocity = new Vec3();
         this.rb.getLinearVelocity(velocity);
 
-        const horizontalVelocity = new Vec3(velocity.x, 0, velocity.z);
+        // Only consider horizontal movement
+        velocity.y = 0;
+        const speed = velocity.length();
 
-        if (horizontalVelocity.length() > this.currentMaxSpeed) {
-            horizontalVelocity.normalize().multiplyScalar(this.currentMaxSpeed);
+        // No movement = no counterforce
+        if (speed < 0.001) return new Vec3();
 
-            velocity.x = horizontalVelocity.x;
-            velocity.z = horizontalVelocity.z;
+        const velocityDirection = velocity.clone().normalize();
+        const desiredDirection = this.WASDmovement.clone();
+        desiredDirection.y = 0;
+        let dot;
 
-            this.rb.setLinearVelocity(velocity);
+        if (desiredDirection.length() > 0.001) {
+            desiredDirection.normalize();
+            dot = Vec3.dot(velocityDirection, desiredDirection);
+        } else {
+            dot = 0; // No desired direction, treat as perpendicular
         }
+        // 0 when aligned, 1 when perpendicular,
+        // 1 when moving completely opposite as well.
+        const counterForceFactor = Math.max(0, Math.min(1, 1 - dot));
+
+        // Opposite the current velocity
+        return velocityDirection.multiplyScalar(-counterForceFactor * speed);
+
+        // const velocity = new Vec3();
+        // this.rb.getLinearVelocity(velocity);
+        // velocity.normalize();
+        // const dot = Vec3.dot(this.node.forward, velocity);
+        // const res = velocity.clone().multiplyScalar(Math.max(0, Math.min(1, 1 - dot)));
+        // return res;
     }
+
+    // limitMovementSpeed() {
+    //     const velocity = new Vec3();
+    //     this.rb.getLinearVelocity(velocity);
+
+    //     const horizontalVelocity = new Vec3(velocity.x, 0, velocity.z);
+
+    //     if (horizontalVelocity.length() > this.currentMaxSpeed) {
+    //         horizontalVelocity.normalize().multiplyScalar(this.currentMaxSpeed);
+
+    //         velocity.x = horizontalVelocity.x;
+    //         velocity.z = horizontalVelocity.z;
+
+    //         this.rb.setLinearVelocity(velocity);
+    //     }
+    // }
 
     getTravelDirection(forward: Vec3, right: Vec3): Vec3 {
         this.WASDmovement.set(0, 0, 0);
